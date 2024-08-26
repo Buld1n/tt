@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mail Log Search</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        form {
+            margin-bottom: 20px;
+        }
+
+        input[type="text"] {
+            padding: 10px;
+            width: 300px;
+            margin-right: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        input[type="submit"], button {
+            padding: 10px 20px;
+            background-color: #5cb85c;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        input[type="submit"]:hover, button:hover {
+            background-color: #4cae4c;
+        }
+
+        button {
+            background-color: #d9534f;
+            margin-left: 10px;
+        }
+
+        button:hover {
+            background-color: #c9302c;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+            position: relative;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        tr:hover {
+            background-color: #f1f1f1;
+        }
+
+        .filter-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .filter-container input {
+            width: 150px;
+            padding: 5px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        .sort-buttons {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .sort-buttons button {
+            background: #007bff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            color: white;
+            padding: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .sort-buttons button.active {
+            background: #003366;
+        }
+
+        .sort-buttons button.sort-asc {
+            color: white;
+        }
+
+        .sort-buttons button.sort-desc {
+            color: white;
+        }
+
+        .sort-buttons .sort-asc::after {
+            content: '↑';
+            font-size: 12px;
+        }
+
+        .sort-buttons .sort-desc::after {
+            content: '↓';
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Search Mail Logs by Recipient Address</h1>
+    <form action="/" method="post" autocomplete="off">
+        <input id="emailInput" type="text" name="address" placeholder="Enter recipient address" value="{{ request.form['address'] if request.form['address'] else '' }}">
+        <input type="submit" value="Search">
+        <button type="button" onclick="resetSearch()">Reset</button>
+    </form>
+
+    <h2>Results:</h2>
+    <table id="resultsTable">
+        <thead>
+            <tr>
+                <th>
+                    Timestamp
+                    <div class="filter-container">
+                        <input type="text" id="timestampFilter" onkeyup="filterTable(0)" placeholder="Filter by Timestamp">
+                        <div class="sort-buttons">
+                            <button id="sortAscTimestamp" class="sort-asc" onclick="sortTable(0, 'asc')"></button>
+                            <button id="sortDescTimestamp" class="sort-desc" onclick="sortTable(0, 'desc')"></button>
+                        </div>
+                    </div>
+                </th>
+                <th>
+                    Log Entry
+                    <div class="filter-container">
+                        <input type="text" id="logEntryFilter" onkeyup="filterTable(1)" placeholder="Filter by Log Entry">
+                        <div class="sort-buttons">
+                            <button id="sortAscLogEntry" class="sort-asc" onclick="sortTable(1, 'asc')"></button>
+                            <button id="sortDescLogEntry" class="sort-desc" onclick="sortTable(1, 'desc')"></button>
+                        </div>
+                    </div>
+                </th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for result in results %}
+                <tr>
+                    <td>{{ result.created }}</td>
+                    <td>{{ result.str }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <script>
+        let currentSort = {
+            columnIndex: null,
+            order: null
+        };
+
+        function resetSearch() {
+            document.getElementById('emailInput').value = '';
+            window.location.href = '/';
+        }
+
+        function sortTable(columnIndex, order) {
+            var table = document.getElementById("resultsTable");
+            var rows = Array.from(table.rows).slice(1); // Exclude the header row
+            var dir = (order === 'asc') ? 1 : -1;
+            var shouldSwitch;
+
+            // Reset previous sort indicators
+            document.querySelectorAll('.sort-buttons button').forEach(btn => btn.classList.remove('active'));
+
+            // Sort rows
+            rows.sort((a, b) => {
+                var x = a.getElementsByTagName("TD")[columnIndex];
+                var y = b.getElementsByTagName("TD")[columnIndex];
+
+                if (columnIndex === 0) {  // Timestamp column
+                    return dir * (new Date(x.innerHTML) - new Date(y.innerHTML));
+                } else {  // Log Entry column
+                    return dir * x.innerHTML.localeCompare(y.innerHTML, undefined, { sensitivity: 'base' });
+                }
+            });
+
+            // Append sorted rows
+            rows.forEach(row => table.appendChild(row));
+
+            // Update current sort state
+            currentSort.columnIndex = columnIndex;
+            currentSort.order = order;
+
+            // Highlight active sort button
+            document.getElementById(`sort${order === 'asc' ? 'Asc' : 'Desc'}${columnIndex === 0 ? 'Timestamp' : 'LogEntry'}`).classList.add('active');
+        }
+
+        function filterTable(columnIndex) {
+            var input, filter, table, tr, td, i, txtValue;
+            input = document.getElementById(columnIndex === 0 ? "timestampFilter" : "logEntryFilter");
+            filter = input.value.toUpperCase();
+            table = document.getElementById("resultsTable");
+            tr = table.getElementsByTagName("tr");
+
+            for (i = 1; i < tr.length; i++) {
+                td = tr[i].getElementsByTagName("td")[columnIndex];
+                if (td) {
+                    txtValue = td.textContent || td.innerText;
+                    tr[i].style.display = txtValue.toUpperCase().indexOf(filter) > -1 ? "" : "none";
+                }
+            }
+        }
+    </script>
+</body>
+</html>
