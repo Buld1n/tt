@@ -191,33 +191,28 @@
 
         function sortTable(columnIndex, order) {
             var table = document.getElementById("resultsTable");
-            var rows = Array.from(table.rows).slice(1); // Exclude the header row
+            var rows = Array.from(table.rows).slice(1);
             var dir = (order === 'asc') ? 1 : -1;
             var shouldSwitch;
 
-            // Reset previous sort indicators
             document.querySelectorAll('.sort-buttons button').forEach(btn => btn.classList.remove('active'));
 
-            // Sort rows
             rows.sort((a, b) => {
                 var x = a.getElementsByTagName("TD")[columnIndex];
                 var y = b.getElementsByTagName("TD")[columnIndex];
 
-                if (columnIndex === 0) {  // Timestamp column
+                if (columnIndex === 0) {
                     return dir * (new Date(x.innerHTML) - new Date(y.innerHTML));
-                } else {  // Log Entry column
+                } else {
                     return dir * x.innerHTML.localeCompare(y.innerHTML, undefined, { sensitivity: 'base' });
                 }
             });
 
-            // Append sorted rows
             rows.forEach(row => table.appendChild(row));
 
-            // Update current sort state
             currentSort.columnIndex = columnIndex;
             currentSort.order = order;
 
-            // Highlight active sort button
             document.getElementById(`sort${order === 'asc' ? 'Asc' : 'Desc'}${columnIndex === 0 ? 'Timestamp' : 'LogEntry'}`).classList.add('active');
         }
 
