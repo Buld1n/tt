@@ -1,6 +1,6 @@
 # How to Launch the Application
 
-To launch the application, Docker is used. Follow these steps:
+To launch the application follow these steps:
 
 1. **Build and Start the Application**
 
